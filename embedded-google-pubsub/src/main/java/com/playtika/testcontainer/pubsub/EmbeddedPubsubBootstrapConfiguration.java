@@ -23,7 +23,6 @@ import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.pubsub.PubsubProperties.BEAN_NAME_EMBEDDED_GOOGLE_PUBSUB;
@@ -36,7 +35,7 @@ import static java.lang.String.format;
 @ConditionalOnProperty(name = "embedded.google.pubsub.enabled", matchIfMissing = true)
 @EnableConfigurationProperties({PubsubProperties.class})
 public class EmbeddedPubsubBootstrapConfiguration {
-
+    private static final String GOOGLE_PUB_SUB_NETWORK_ALIAS = "googlepubsub.testcontainer.docker";
     public static final String BEAN_NAME_EMBEDDED_GOOGLE_PUBSUB_RESOURCES_GENERATOR = "embeddedGooglePubsubResourcesGenerator";
     public static final String BEAN_NAME_EMBEDDED_GOOGLE_PUBSUB_MANAGED_CHANNEL = "embeddedGooglePubsubManagedChannel";
 
@@ -64,7 +63,7 @@ public class EmbeddedPubsubBootstrapConfiguration {
     @Bean(name = BEAN_NAME_EMBEDDED_GOOGLE_PUBSUB, destroyMethod = "stop")
     public GenericContainer<?> pubsub(ConfigurableEnvironment environment,
                                       PubsubProperties properties,
-                                      Optional<Network> network) {
+                                      Network network) {
         GenericContainer<?> pubsubContainer = new GenericContainer<>(ContainerUtils.getDockerImageName(properties))
                 .withExposedPorts(properties.getPort())
                 .withCommand(
@@ -76,9 +75,10 @@ public class EmbeddedPubsubBootstrapConfiguration {
                                 properties.getHost(),
                                 properties.getPort()
                         )
-                ).waitingFor(new LogMessageWaitStrategy().withRegEx("(?s).*started.*$"));
-
-        network.ifPresent(pubsubContainer::withNetwork);
+                )
+                .waitingFor(new LogMessageWaitStrategy().withRegEx("(?s).*started.*$"))
+                .withNetwork(network)
+                .withNetworkAliases(GOOGLE_PUB_SUB_NETWORK_ALIAS);
 
         pubsubContainer = configureCommonsAndStart(pubsubContainer, properties, log);
         registerPubsubEnvironment(pubsubContainer, environment, properties);

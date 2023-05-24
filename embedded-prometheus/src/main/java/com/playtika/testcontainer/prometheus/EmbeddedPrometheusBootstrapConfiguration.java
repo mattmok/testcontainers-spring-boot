@@ -22,7 +22,6 @@ import org.testcontainers.containers.wait.strategy.WaitStrategy;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.prometheus.PrometheusProperties.PROMETHEUS_BEAN_NAME;
@@ -35,6 +34,7 @@ import static com.playtika.testcontainer.prometheus.PrometheusProperties.PROMETH
 @ConditionalOnProperty(name = "embedded.prometheus.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(PrometheusProperties.class)
 public class EmbeddedPrometheusBootstrapConfiguration {
+    private static final String PROMETHEUS_NETWORK_ALIAS = "prometheus.testcontainer.docker";
 
     @Bean
     @ConditionalOnMissingBean(name = "prometheusWaitStrategy")
@@ -69,21 +69,19 @@ public class EmbeddedPrometheusBootstrapConfiguration {
     public GenericContainer<?> prometheus(ConfigurableEnvironment environment,
                                           PrometheusProperties properties,
                                           WaitStrategy prometheusWaitStrategy,
-                                          Optional<Network> network) {
+                                          Network network) {
 
         GenericContainer<?> container =
                 new GenericContainer<>(ContainerUtils.getDockerImageName(properties))
                         .withExposedPorts(properties.getPort())
                         .withNetwork(Network.SHARED)
                         .withNetworkAliases(properties.getNetworkAlias())
-                        .waitingFor(prometheusWaitStrategy);
-
-        network.ifPresent(container::withNetwork);
+                        .waitingFor(prometheusWaitStrategy)
+                        .withNetwork(network)
+                        .withNetworkAliases(PROMETHEUS_NETWORK_ALIAS);
 
         configureCommonsAndStart(container, properties, log);
-
         registerEnvironment(container, environment, properties);
-
         return container;
     }
 

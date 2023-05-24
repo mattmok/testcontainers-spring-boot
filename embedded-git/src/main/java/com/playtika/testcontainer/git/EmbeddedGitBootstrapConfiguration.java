@@ -21,7 +21,6 @@ import org.testcontainers.containers.wait.strategy.HostPortWaitStrategy;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.git.GitProperties.BEAN_NAME_EMBEDDED_GIT;
@@ -36,6 +35,7 @@ import static org.testcontainers.utility.MountableFile.forClasspathResource;
 @ConditionalOnProperty(name = "embedded.git.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(GitProperties.class)
 public class EmbeddedGitBootstrapConfiguration {
+    private static final String GIT_NETWORK_ALIAS = "git.testcontainer.docker";
 
     @Bean
     @ConditionalOnToxiProxyEnabled(module = "git")
@@ -61,9 +61,11 @@ public class EmbeddedGitBootstrapConfiguration {
     @Bean(name = BEAN_NAME_EMBEDDED_GIT, destroyMethod = "stop")
     public GenericContainer<?> embeddedGit(ConfigurableEnvironment environment,
                                            GitProperties properties,
-                                           Optional<Network> network) {
-        GenericContainer<?> gitContainer = configureCommonsAndStart(createContainer(properties), properties, log);
-        network.ifPresent(gitContainer::withNetwork);
+                                           Network network) {
+        GenericContainer<?> gitContainer = configureCommonsAndStart(createContainer(properties), properties, log)
+                .withNetwork(network)
+                .withNetworkAliases(GIT_NETWORK_ALIAS);
+
         registerGitEnvironment(gitContainer, environment, properties);
         return gitContainer;
     }
@@ -102,7 +104,7 @@ public class EmbeddedGitBootstrapConfiguration {
         environment.getPropertySources().addFirst(propertySource);
 
         log.info("Started Git server. You can clone repo by using the following link: {}. " +
-                "%YOUR_REPO_NAME% is a name of a git repository folder inside {}",
+                        "%YOUR_REPO_NAME% is a name of a git repository folder inside {}",
                 connectionString, properties.getPathToRepositories());
     }
 }

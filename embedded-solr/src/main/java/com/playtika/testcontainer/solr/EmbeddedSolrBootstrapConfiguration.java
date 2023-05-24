@@ -20,7 +20,6 @@ import org.testcontainers.containers.ToxiproxyContainer;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.solr.SolrProperties.BEAN_NAME_EMBEDDED_SOLR;
@@ -32,6 +31,7 @@ import static com.playtika.testcontainer.solr.SolrProperties.BEAN_NAME_EMBEDDED_
 @ConditionalOnProperty(name = "embedded.solr.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(SolrProperties.class)
 public class EmbeddedSolrBootstrapConfiguration {
+    private static final String SOLR_NETWORK_ALIAS = "solr.testcontainer.docker";
 
     @Bean
     @ConditionalOnToxiProxyEnabled(module = "solr")
@@ -56,12 +56,12 @@ public class EmbeddedSolrBootstrapConfiguration {
     @Bean(name = BEAN_NAME_EMBEDDED_SOLR, destroyMethod = "stop")
     public GenericContainer<?> solrContainer(ConfigurableEnvironment environment,
                                              SolrProperties properties,
-                                             Optional<Network> network) {
+                                             Network network) {
 
         SolrContainer solrContainer = new SolrContainer(ContainerUtils.getDockerImageName(properties))
-                .withExposedPorts(properties.getPort());
-
-        network.ifPresent(solrContainer::withNetwork);
+                .withExposedPorts(properties.getPort())
+                .withNetwork(network)
+                .withNetworkAliases(SOLR_NETWORK_ALIAS);
 
         solrContainer = (SolrContainer) configureCommonsAndStart(solrContainer, properties, log);
 

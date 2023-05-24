@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.redis.EnvUtils.registerRedisEnvironment;
@@ -44,6 +43,7 @@ import static com.playtika.testcontainer.redis.RedisProperties.BEAN_NAME_EMBEDDE
 @EnableConfigurationProperties(RedisProperties.class)
 @RequiredArgsConstructor
 public class EmbeddedRedisBootstrapConfiguration {
+    private static final String REDIS_NETWORK_ALIAS = "redis.testcontainer.docker";
 
     public final static String REDIS_WAIT_STRATEGY_BEAN_NAME = "redisStartupCheckStrategy";
 
@@ -87,7 +87,7 @@ public class EmbeddedRedisBootstrapConfiguration {
     @Bean(name = BEAN_NAME_EMBEDDED_REDIS, destroyMethod = "stop")
     public GenericContainer<?> redis(ConfigurableEnvironment environment,
                                      @Qualifier(REDIS_WAIT_STRATEGY_BEAN_NAME) WaitStrategy redisStartupCheckStrategy,
-                                     Optional<Network> network) throws Exception {
+                                     Network network) throws Exception {
 
         // CLUSTER SLOTS command returns IP:port for each node, so ports outside and inside
         // container must be the same
@@ -100,8 +100,10 @@ public class EmbeddedRedisBootstrapConfiguration {
                         .withCopyFileToContainer(MountableFile.forHostPath(prepareRedisConf()), "/data/redis.conf")
                         .withCopyFileToContainer(MountableFile.forHostPath(prepareNodesConf()), "/data/nodes.conf")
                         .withCommand("redis-server", "/data/redis.conf")
-                        .waitingFor(redisStartupCheckStrategy);
-        network.ifPresent(redis::withNetwork);
+                        .waitingFor(redisStartupCheckStrategy)
+                        .withNetwork(network)
+                        .withNetworkAliases(REDIS_NETWORK_ALIAS);
+
         redis = configureCommonsAndStart(redis, properties, log);
         Map<String, Object> redisEnv = registerRedisEnvironment(environment, redis, properties, properties.getPort());
         log.info("Started Redis cluster. Connection details: {}", redisEnv);

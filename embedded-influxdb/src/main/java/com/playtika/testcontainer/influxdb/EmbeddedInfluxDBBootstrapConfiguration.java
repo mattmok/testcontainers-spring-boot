@@ -22,7 +22,6 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.influxdb.InfluxDBProperties.EMBEDDED_INFLUX_DB;
@@ -34,6 +33,7 @@ import static com.playtika.testcontainer.influxdb.InfluxDBProperties.EMBEDDED_IN
 @ConditionalOnProperty(name = "embedded.influxdb.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(InfluxDBProperties.class)
 public class EmbeddedInfluxDBBootstrapConfiguration {
+    private static final String INFLUXDB_NETWORK_ALIAS = "influxdb.testcontainer.docker";
 
     @Bean
     @ConditionalOnToxiProxyEnabled(module = "influxdb")
@@ -58,7 +58,7 @@ public class EmbeddedInfluxDBBootstrapConfiguration {
     @Bean(name = EMBEDDED_INFLUX_DB, destroyMethod = "stop")
     public ConcreteInfluxDbContainer influxdb(ConfigurableEnvironment environment,
                                               InfluxDBProperties properties,
-                                              Optional<Network> network) {
+                                              Network network) {
         ConcreteInfluxDbContainer influxDBContainer = new ConcreteInfluxDbContainer(ContainerUtils.getDockerImageName(properties));
         influxDBContainer
                 .withAdmin(properties.getAdminUser())
@@ -67,9 +67,9 @@ public class EmbeddedInfluxDBBootstrapConfiguration {
                 .withUsername(properties.getUser())
                 .withPassword(properties.getPassword())
                 .withDatabase(properties.getDatabase())
-                .withExposedPorts(properties.getPort());
-
-        network.ifPresent(influxDBContainer::withNetwork);
+                .withExposedPorts(properties.getPort())
+                .withNetwork(network)
+                .withNetworkAliases(INFLUXDB_NETWORK_ALIAS);
 
         influxDBContainer.waitingFor(getInfluxWaitStrategy(properties.getUser(), properties.getPassword()));
 

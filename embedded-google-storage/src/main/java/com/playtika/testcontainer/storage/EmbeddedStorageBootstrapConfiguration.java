@@ -22,7 +22,6 @@ import org.testcontainers.containers.ToxiproxyContainer;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.storage.StorageProperties.BEAN_NAME_EMBEDDED_GOOGLE_STORAGE_SERVER;
@@ -36,6 +35,7 @@ import static java.lang.String.format;
 @ConditionalOnProperty(name = "embedded.google.storage.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(StorageProperties.class)
 public class EmbeddedStorageBootstrapConfiguration {
+    private static final String GOOGLE_STORAGE_NETWORK_ALIAS = "googlestorage.testcontainer.docker";
 
     @Bean
     @ConditionalOnToxiProxyEnabled(module = "google.storage")
@@ -59,7 +59,7 @@ public class EmbeddedStorageBootstrapConfiguration {
     @Bean(name = BEAN_NAME_EMBEDDED_GOOGLE_STORAGE_SERVER, destroyMethod = "stop")
     GenericContainer<?> storageServer(ConfigurableEnvironment environment,
                                       StorageProperties properties,
-                                      Optional<Network> network) throws IOException {
+                                      Network network) throws IOException {
 
         GenericContainer<?> storageContainer = new GenericContainer<>(ContainerUtils.getDockerImageName(properties))
                 .withExposedPorts(StorageProperties.PORT)
@@ -70,9 +70,9 @@ public class EmbeddedStorageBootstrapConfiguration {
                         "-host", "0.0.0.0",
                         "-port", String.valueOf(StorageProperties.PORT),
                         "-location", properties.getBucketLocation()
-                ));
-
-        network.ifPresent(storageContainer::withNetwork);
+                ))
+                .withNetwork(network)
+                .withNetworkAliases(GOOGLE_STORAGE_NETWORK_ALIAS);
 
         storageContainer = configureCommonsAndStart(storageContainer, properties, log);
         prepareContainerConfiguration(storageContainer);

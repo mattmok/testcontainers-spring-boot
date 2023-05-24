@@ -6,7 +6,6 @@ import com.playtika.testcontainer.toxiproxy.condition.ConditionalOnToxiProxyEnab
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,15 +25,7 @@ import java.util.Map;
 @EnableConfigurationProperties(ToxiProxyProperties.class)
 public class EmbeddedToxiProxyBootstrapConfiguration {
 
-    private static final String TOXIPROXY_NETWORK_ALIAS = "toxiproxy";
-
-    @Bean
-    @ConditionalOnMissingBean(Network.class)
-    Network toxiproxyNetwork() {
-        Network network = Network.newNetwork();
-        log.info("Created docker Network with id={}", network.getId());
-        return network;
-    }
+    private static final String TOXIPROXY_NETWORK_ALIAS = "toxiproxy.testcontainer.docker";
 
     @Bean(name = "toxiproxy", destroyMethod = "stop")
     ToxiproxyContainer toxiproxy(ToxiProxyProperties toxiProxyProperties,

@@ -19,7 +19,6 @@ import org.testcontainers.containers.ToxiproxyContainer;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.minio.MinioProperties.MINIO_BEAN_NAME;
@@ -30,6 +29,7 @@ import static com.playtika.testcontainer.minio.MinioProperties.MINIO_BEAN_NAME;
 @AutoConfigureAfter(DockerPresenceBootstrapConfiguration.class)
 @ConditionalOnProperty(value = "embedded.minio.enabled", matchIfMissing = true)
 public class EmbeddedMinioBootstrapConfiguration {
+    private static final String MINIO_NETWORK_ALIAS = "minio.testcontainer.docker";
 
     @Bean
     @ConditionalOnMissingBean
@@ -67,7 +67,7 @@ public class EmbeddedMinioBootstrapConfiguration {
     public GenericContainer<?> minio(MinioWaitStrategy minioWaitStrategy,
                                      ConfigurableEnvironment environment,
                                      MinioProperties properties,
-                                     Optional<Network> network) {
+                                     Network network) {
 
         GenericContainer<?> minio =
                 new GenericContainer<>(ContainerUtils.getDockerImageName(properties))
@@ -78,9 +78,10 @@ public class EmbeddedMinioBootstrapConfiguration {
                         .withEnv("MINIO_WORM", properties.getWorm())
                         .withEnv("MINIO_BROWSER", properties.getBrowser())
                         .withCommand("server", properties.getDirectory(), "--console-address", ":" + properties.getConsolePort())
-                        .waitingFor(minioWaitStrategy);
+                        .waitingFor(minioWaitStrategy)
+                        .withNetwork(network)
+                        .withNetworkAliases(MINIO_NETWORK_ALIAS);
 
-        network.ifPresent(minio::withNetwork);
         minio = configureCommonsAndStart(minio, properties, log);
         registerEnvironment(minio, environment, properties);
         return minio;

@@ -20,7 +20,6 @@ import org.testcontainers.containers.localstack.LocalStackContainer;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.localstack.LocalStackProperties.BEAN_NAME_EMBEDDED_LOCALSTACK;
@@ -32,6 +31,7 @@ import static com.playtika.testcontainer.localstack.LocalStackProperties.BEAN_NA
 @ConditionalOnProperty(name = "embedded.localstack.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(LocalStackProperties.class)
 public class EmbeddedLocalStackBootstrapConfiguration {
+    private static final String LOCALSTACK_NETWORK_ALIAS = "localstack.testcontainer.docker";
 
     @Bean
     @ConditionalOnToxiProxyEnabled(module = "localstack")
@@ -57,15 +57,15 @@ public class EmbeddedLocalStackBootstrapConfiguration {
     @Bean(name = BEAN_NAME_EMBEDDED_LOCALSTACK, destroyMethod = "stop")
     public LocalStackContainer localStack(ConfigurableEnvironment environment,
                                           LocalStackProperties properties,
-                                          Optional<Network> network) {
+                                          Network network) {
         LocalStackContainer localStackContainer = new LocalStackContainer(ContainerUtils.getDockerImageName(properties));
         localStackContainer
                 .withExposedPorts(properties.getEdgePort())
                 .withEnv("EDGE_PORT", String.valueOf(properties.getEdgePort()))
                 .withEnv("HOSTNAME", properties.getHostname())
-                .withEnv("HOSTNAME_EXTERNAL", properties.getHostnameExternal());
-
-        network.ifPresent(localStackContainer::withNetwork);
+                .withEnv("HOSTNAME_EXTERNAL", properties.getHostnameExternal())
+                .withNetwork(network)
+                .withNetworkAliases(LOCALSTACK_NETWORK_ALIAS);
 
         for (LocalStackContainer.Service service : properties.services) {
             localStackContainer.withServices(service);

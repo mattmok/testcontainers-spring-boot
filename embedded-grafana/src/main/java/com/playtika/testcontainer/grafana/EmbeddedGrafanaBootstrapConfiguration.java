@@ -22,7 +22,6 @@ import org.testcontainers.containers.wait.strategy.WaitStrategy;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.grafana.GrafanaProperties.GRAFANA_BEAN_NAME;
@@ -34,6 +33,8 @@ import static com.playtika.testcontainer.grafana.GrafanaProperties.GRAFANA_BEAN_
 @ConditionalOnProperty(name = "embedded.grafana.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(GrafanaProperties.class)
 public class EmbeddedGrafanaBootstrapConfiguration {
+
+    private static final String GRAFANA_NETWORK_ALIAS = "grafana.testcontainer.docker";
 
     @Bean
     @ConditionalOnMissingBean(name = "grafanaWaitStrategy")
@@ -68,7 +69,7 @@ public class EmbeddedGrafanaBootstrapConfiguration {
     public GenericContainer<?> grafana(ConfigurableEnvironment environment,
                                        GrafanaProperties properties,
                                        WaitStrategy grafanaWaitStrategy,
-                                       Optional<Network> network) {
+                                       Network network) {
 
         GenericContainer<?> container =
                 new GenericContainer<>(ContainerUtils.getDockerImageName(properties))
@@ -77,9 +78,9 @@ public class EmbeddedGrafanaBootstrapConfiguration {
                         .withExposedPorts(properties.getPort())
                         .withNetwork(Network.SHARED)
                         .withNetworkAliases(properties.getNetworkAlias())
-                        .waitingFor(grafanaWaitStrategy);
-
-        network.ifPresent(container::withNetwork);
+                        .waitingFor(grafanaWaitStrategy)
+                        .withNetwork(network)
+                        .withNetworkAliases(GRAFANA_NETWORK_ALIAS);
 
         configureCommonsAndStart(container, properties, log);
 

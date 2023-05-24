@@ -20,7 +20,6 @@ import org.testcontainers.couchbase.CouchbaseContainer;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.couchbase.CouchbaseProperties.BEAN_NAME_EMBEDDED_COUCHBASE;
@@ -32,6 +31,7 @@ import static com.playtika.testcontainer.couchbase.CouchbaseProperties.BEAN_NAME
 @ConditionalOnProperty(name = "embedded.couchbase.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(CouchbaseProperties.class)
 public class EmbeddedCouchbaseBootstrapConfiguration {
+    private static final String COUCHBASE_NETWORK_ALIAS = "couchbase.testcontainer.docker";
 
     @Bean
     @ConditionalOnToxiProxyEnabled(module = "couchbase")
@@ -55,7 +55,7 @@ public class EmbeddedCouchbaseBootstrapConfiguration {
     @Bean(name = BEAN_NAME_EMBEDDED_COUCHBASE, destroyMethod = "stop")
     public CouchbaseContainer couchbase(ConfigurableEnvironment environment,
                                         CouchbaseProperties properties,
-                                        Optional<Network> network) {
+                                        Network network) {
         BucketDefinition bucketDefinition = new BucketDefinition(properties.getBucket())
                 .withPrimaryIndex(true)
                 .withQuota(properties.getBucketRamMb());
@@ -63,9 +63,10 @@ public class EmbeddedCouchbaseBootstrapConfiguration {
         CouchbaseContainer couchbase = new CouchbaseContainer(ContainerUtils.getDockerImageName(properties))
                 .withBucket(bucketDefinition)
                 .withEnabledServices(properties.getServices())
-                .withCredentials(properties.getUser(), properties.getPassword());
+                .withCredentials(properties.getUser(), properties.getPassword())
+                .withNetwork(network)
+                .withNetworkAliases(COUCHBASE_NETWORK_ALIAS);
 
-        network.ifPresent(couchbase::withNetwork);
         couchbase = (CouchbaseContainer) configureCommonsAndStart(couchbase, properties, log);
 
         registerCouchbaseEnvironment(couchbase, environment, properties);

@@ -19,7 +19,6 @@ import org.testcontainers.containers.ToxiproxyContainer;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.azurite.AzuriteProperties.AZURITE_BEAN_NAME;
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
@@ -31,6 +30,7 @@ import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCo
 @ConditionalOnProperty(name = "embedded.azurite.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(AzuriteProperties.class)
 public class EmbeddedAzuriteBootstrapConfiguration {
+    private static final String AZURITE_BLOB_NETWORK_ALIAS = "azurite-blob.testcontainer.docker";
 
     @Bean
     @ConditionalOnToxiProxyEnabled(module = "azurite")
@@ -95,11 +95,11 @@ public class EmbeddedAzuriteBootstrapConfiguration {
     @Bean(name = AZURITE_BEAN_NAME, destroyMethod = "stop")
     public GenericContainer<?> azurite(ConfigurableEnvironment environment,
                                        AzuriteProperties properties,
-                                       Optional<Network> network) {
+                                       Network network) {
         GenericContainer<?> azuriteContainer = new GenericContainer<>(ContainerUtils.getDockerImageName(properties))
-                .withExposedPorts(properties.getBlobStoragePort(), properties.getQueueStoragePort(), properties.getTableStoragePort());
-
-        network.ifPresent(azuriteContainer::withNetwork);
+                .withExposedPorts(properties.getBlobStoragePort(), properties.getQueueStoragePort(), properties.getTableStoragePort())
+                .withNetwork(network)
+                .withNetworkAliases(AZURITE_BLOB_NETWORK_ALIAS);
 
         configureCommonsAndStart(azuriteContainer, properties, log);
         registerEnvironment(azuriteContainer, environment, properties);

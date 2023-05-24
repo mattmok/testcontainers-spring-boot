@@ -1,5 +1,6 @@
 package com.playtika.testcontainer.toxiproxy;
 
+import com.playtika.testcontainer.common.spring.DockerNetworkBootstrapConfiguration;
 import eu.rekawek.toxiproxy.Proxy;
 import eu.rekawek.toxiproxy.ToxiproxyClient;
 import eu.rekawek.toxiproxy.model.Toxic;
@@ -10,6 +11,7 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.testcontainers.containers.ToxiproxyContainer;
 
@@ -71,6 +73,7 @@ class EmbeddedToxiProxyBootstrapConfigurationTest {
 
     @EnableAutoConfiguration
     @Configuration
+    @Import(DockerNetworkBootstrapConfiguration.class)
     static class TestConfiguration {
 
     }

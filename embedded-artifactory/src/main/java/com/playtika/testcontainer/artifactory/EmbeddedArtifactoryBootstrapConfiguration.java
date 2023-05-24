@@ -22,7 +22,6 @@ import org.testcontainers.containers.wait.strategy.WaitStrategy;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.artifactory.ArtifactoryProperties.ARTIFACTORY_BEAN_NAME;
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
@@ -34,6 +33,7 @@ import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCo
 @ConditionalOnProperty(name = "embedded.artifactory.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(ArtifactoryProperties.class)
 public class EmbeddedArtifactoryBootstrapConfiguration {
+    private static final String ARTIFACTORY_NETWORK_ALIAS = "artifactory.testcontainer.docker";
 
     @Bean
     @ConditionalOnMissingBean(name = "artifactoryWaitStrategy")
@@ -68,16 +68,17 @@ public class EmbeddedArtifactoryBootstrapConfiguration {
     public GenericContainer<?> artifactory(ConfigurableEnvironment environment,
                                            ArtifactoryProperties properties,
                                            WaitStrategy artifactoryWaitStrategy,
-                                           Optional<Network> network) {
+                                           Network network) {
 
         GenericContainer<?> container =
                 new GenericContainer<>(ContainerUtils.getDockerImageName(properties))
                         .withExposedPorts(properties.getRestApiPort(), properties.getGeneralPort())
                         .withNetwork(Network.SHARED)
                         .withNetworkAliases(properties.getNetworkAlias())
-                        .waitingFor(artifactoryWaitStrategy);
+                        .waitingFor(artifactoryWaitStrategy)
+                        .withNetwork(network)
+                        .withNetworkAliases(ARTIFACTORY_NETWORK_ALIAS);
 
-        network.ifPresent(container::withNetwork);
         configureCommonsAndStart(container, properties, log);
 
         registerEnvironment(container, environment, properties);

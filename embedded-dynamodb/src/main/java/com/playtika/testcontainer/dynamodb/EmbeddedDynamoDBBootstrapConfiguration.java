@@ -21,7 +21,6 @@ import org.testcontainers.containers.wait.strategy.HostPortWaitStrategy;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.dynamodb.DynamoDBProperties.BEAN_NAME_EMBEDDED_DYNAMODB;
@@ -33,6 +32,7 @@ import static com.playtika.testcontainer.dynamodb.DynamoDBProperties.BEAN_NAME_E
 @ConditionalOnProperty(name = "embedded.dynamodb.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(DynamoDBProperties.class)
 public class EmbeddedDynamoDBBootstrapConfiguration {
+    private static final String DYNAMODB_NETWORK_ALIAS = "dynamodb.testcontainer.docker";
 
     @Bean
     @ConditionalOnToxiProxyEnabled(module = "dynamodb")
@@ -57,13 +57,13 @@ public class EmbeddedDynamoDBBootstrapConfiguration {
     @Bean(name = BEAN_NAME_EMBEDDED_DYNAMODB, destroyMethod = "stop")
     public GenericContainer<?> dynamoDb(ConfigurableEnvironment environment,
                                         DynamoDBProperties properties,
-                                        Optional<Network> network) {
+                                        Network network) {
 
         GenericContainer<?> dynamodbContainer = new GenericContainer<>(ContainerUtils.getDockerImageName(properties))
                 .withExposedPorts(properties.getPort())
-                .waitingFor(new HostPortWaitStrategy());
-
-        network.ifPresent(dynamodbContainer::withNetwork);
+                .waitingFor(new HostPortWaitStrategy())
+                .withNetwork(network)
+                .withNetworkAliases(DYNAMODB_NETWORK_ALIAS);
 
         dynamodbContainer = configureCommonsAndStart(dynamodbContainer, properties, log);
 

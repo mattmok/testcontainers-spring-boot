@@ -20,7 +20,6 @@ import org.testcontainers.containers.wait.strategy.HostPortWaitStrategy;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.vertica.VerticaProperties.BEAN_NAME_EMBEDDED_VERTICA;
@@ -32,13 +31,14 @@ import static com.playtika.testcontainer.vertica.VerticaProperties.BEAN_NAME_EMB
 @ConditionalOnProperty(name = "embedded.vertica.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(VerticaProperties.class)
 public class EmbeddedVerticaBootstrapConfiguration {
+    private static final String VERTICA_NETWORK_ALIAS = "vertica.testcontainer.docker";
 
     @Bean
     @ConditionalOnToxiProxyEnabled(module = "vertica")
     ToxiproxyContainer.ContainerProxy verticaContainerProxy(ToxiproxyContainer toxiproxyContainer,
-                                                               @Qualifier(BEAN_NAME_EMBEDDED_VERTICA) GenericContainer<?> embeddedVertica,
-                                                               ConfigurableEnvironment environment,
-                                                               VerticaProperties verticaProperties) {
+                                                            @Qualifier(BEAN_NAME_EMBEDDED_VERTICA) GenericContainer<?> embeddedVertica,
+                                                            ConfigurableEnvironment environment,
+                                                            VerticaProperties verticaProperties) {
         ToxiproxyContainer.ContainerProxy proxy = toxiproxyContainer.getProxy(embeddedVertica, verticaProperties.getPort());
 
         Map<String, Object> map = new LinkedHashMap<>();
@@ -56,9 +56,11 @@ public class EmbeddedVerticaBootstrapConfiguration {
     @Bean(name = BEAN_NAME_EMBEDDED_VERTICA, destroyMethod = "stop")
     public GenericContainer<?> embeddedVertica(ConfigurableEnvironment environment,
                                                VerticaProperties properties,
-                                               Optional<Network> network) {
-        GenericContainer<?> verticaContainer = configureCommonsAndStart(createContainer(properties), properties, log);
-        network.ifPresent(verticaContainer::withNetwork);
+                                               Network network) {
+        GenericContainer<?> verticaContainer = configureCommonsAndStart(createContainer(properties), properties, log)
+                .withNetwork(network)
+                .withNetworkAliases(VERTICA_NETWORK_ALIAS);
+
         registerVerticaEnvironment(verticaContainer, environment, properties);
         return verticaContainer;
     }

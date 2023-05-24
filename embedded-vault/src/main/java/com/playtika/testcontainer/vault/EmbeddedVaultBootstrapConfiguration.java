@@ -22,7 +22,6 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.vault.VaultProperties.BEAN_NAME_EMBEDDED_VAULT;
@@ -36,6 +35,7 @@ import static org.springframework.core.Ordered.HIGHEST_PRECEDENCE;
 @ConditionalOnProperty(name = "embedded.vault.enabled", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(VaultProperties.class)
 public class EmbeddedVaultBootstrapConfiguration {
+    private static final String VAULT_NETWORK_ALIAS = "vault.testcontainer.docker";
 
     @Bean
     @ConditionalOnToxiProxyEnabled(module = "vault")
@@ -60,13 +60,13 @@ public class EmbeddedVaultBootstrapConfiguration {
     @Bean(name = BEAN_NAME_EMBEDDED_VAULT, destroyMethod = "stop")
     public VaultContainer vault(ConfigurableEnvironment environment,
                                 VaultProperties properties,
-                                Optional<Network> network) {
+                                Network network) {
 
         VaultContainer vault = new VaultContainer<>(ContainerUtils.getDockerImageName(properties))
                 .withVaultToken(properties.getToken())
-                .withExposedPorts(properties.getPort());
-
-        network.ifPresent(vault::withNetwork);
+                .withExposedPorts(properties.getPort())
+                .withNetwork(network)
+                .withNetworkAliases(VAULT_NETWORK_ALIAS);
 
         String[] secrets = properties.getSecrets().entrySet().stream()
                 .map(entry -> String.format("%s=%s", entry.getKey(), entry.getValue()))

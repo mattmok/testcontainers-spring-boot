@@ -16,7 +16,6 @@ import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy;
 import org.testcontainers.k3s.K3sContainer;
 
 import java.util.LinkedHashMap;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.k3s.K3sProperties.EMBEDDED_K3S;
@@ -28,18 +27,20 @@ import static com.playtika.testcontainer.k3s.K3sProperties.EMBEDDED_K3S;
 @ConditionalOnProperty(name = "embedded.k3s.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(K3sProperties.class)
 public class EmbeddedK3sBootstrapConfiguration {
+    private static final String K3S_NETWORK_ALIAS = "k3s.testcontainer.docker";
+
 
     @Bean(name = EMBEDDED_K3S, destroyMethod = "stop")
     public K3sContainer k3s(ConfigurableEnvironment environment,
                             K3sProperties properties,
-                            Optional<Network> network) {
+                            Network network) {
         K3sContainer k3sContainer = new K3sContainer(ContainerUtils.getDockerImageName(properties));
         k3sContainer
                 .withCommand(new String[]{"server", "--tls-san=" + k3sContainer.getHost()})
                 .withExposedPorts(properties.getPort())
-                .waitingFor(new LogMessageWaitStrategy().withRegEx(".*Node controller sync successful.*"));
-
-        network.ifPresent(k3sContainer::withNetwork);
+                .waitingFor(new LogMessageWaitStrategy().withRegEx(".*Node controller sync successful.*"))
+                .withNetwork(network)
+                .withNetworkAliases(K3S_NETWORK_ALIAS);
 
         k3sContainer = (K3sContainer) configureCommonsAndStart(k3sContainer, properties, log);
         registerK3sEnvironment(k3sContainer, environment);

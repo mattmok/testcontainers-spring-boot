@@ -25,7 +25,6 @@ import org.testcontainers.containers.wait.strategy.WaitStrategy;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.aerospike.AerospikeProperties.AEROSPIKE_BEAN_NAME;
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
@@ -38,6 +37,8 @@ import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCo
 @ConditionalOnProperty(value = "embedded.aerospike.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(AerospikeProperties.class)
 public class EmbeddedAerospikeBootstrapConfiguration {
+
+    private static final String AEROSPIKE_NETWORK_ALIAS = "aerospike.testcontainer.docker";
 
     @Bean
     @ConditionalOnMissingBean
@@ -68,9 +69,9 @@ public class EmbeddedAerospikeBootstrapConfiguration {
 
     @Bean(name = AEROSPIKE_BEAN_NAME, destroyMethod = "stop")
     public GenericContainer<?> aerospike(AerospikeWaitStrategy aerospikeWaitStrategy,
-                                      ConfigurableEnvironment environment,
-                                      AerospikeProperties properties,
-                                      Optional<Network> network) {
+                                         ConfigurableEnvironment environment,
+                                         AerospikeProperties properties,
+                                         Network network) {
         WaitStrategy waitStrategy = new WaitAllStrategy()
                 .withStrategy(aerospikeWaitStrategy)
                 .withStrategy(new HostPortWaitStrategy())
@@ -84,14 +85,16 @@ public class EmbeddedAerospikeBootstrapConfiguration {
                         .withEnv("SERVICE_PORT", String.valueOf(properties.port))
                         .withEnv("MEM_GB", String.valueOf(1))
                         .withEnv("STORAGE_GB", String.valueOf(1))
-                        .waitingFor(waitStrategy);
-        network.ifPresent(aerospike::withNetwork);
+                        .waitingFor(waitStrategy)
+                        .withNetwork(network)
+                        .withNetworkAliases(AEROSPIKE_NETWORK_ALIAS);
+
         String featureKey = properties.featureKey;
         if (featureKey != null) {
             // see https://github.com/aerospike/aerospike-server-enterprise.docker/blob/develop/aerospike.template.conf
             aerospike
-                .withEnv("FEATURES", featureKey)
-                .withEnv("FEATURE_KEY_FILE", "env-b64:FEATURES");
+                    .withEnv("FEATURES", featureKey)
+                    .withEnv("FEATURE_KEY_FILE", "env-b64:FEATURES");
         }
         aerospike = configureCommonsAndStart(aerospike, properties, log);
         registerAerospikeEnvironment(aerospike, environment, properties);

@@ -19,7 +19,6 @@ import org.testcontainers.elasticsearch.ElasticsearchContainer;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.elasticsearch.ElasticSearchProperties.BEAN_NAME_EMBEDDED_ELASTIC_SEARCH;
@@ -31,6 +30,7 @@ import static com.playtika.testcontainer.elasticsearch.ElasticSearchProperties.B
 @ConditionalOnProperty(name = "embedded.elasticsearch.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(ElasticSearchProperties.class)
 public class EmbeddedElasticSearchBootstrapConfiguration {
+    private static final String ELASTICSEARCH_NETWORK_ALIAS = "elasticsearch.testcontainer.docker";
 
     @Bean
     @ConditionalOnToxiProxyEnabled(module = "elasticsearch")
@@ -56,10 +56,12 @@ public class EmbeddedElasticSearchBootstrapConfiguration {
     @Bean(name = BEAN_NAME_EMBEDDED_ELASTIC_SEARCH, destroyMethod = "stop")
     public ElasticsearchContainer elasticSearch(ConfigurableEnvironment environment,
                                                 ElasticSearchProperties properties,
-                                                Optional<Network> network) {
+                                                Network network) {
 
-        ElasticsearchContainer elasticSearch = ElasticSearchContainerFactory.create(properties);
-        network.ifPresent(elasticSearch::withNetwork);
+        ElasticsearchContainer elasticSearch = ElasticSearchContainerFactory.create(properties)
+                .withNetwork(network)
+                .withNetworkAliases(ELASTICSEARCH_NETWORK_ALIAS);
+
         elasticSearch = (ElasticsearchContainer) configureCommonsAndStart(elasticSearch, properties, log);
         registerElasticSearchEnvironment(elasticSearch, environment, properties);
         return elasticSearch;

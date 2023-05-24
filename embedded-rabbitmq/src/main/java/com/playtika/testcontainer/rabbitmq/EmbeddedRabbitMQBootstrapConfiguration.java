@@ -19,7 +19,6 @@ import org.testcontainers.containers.ToxiproxyContainer;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.rabbitmq.RabbitMQProperties.BEAN_NAME_EMBEDDED_RABBITMQ;
@@ -31,6 +30,7 @@ import static com.playtika.testcontainer.rabbitmq.RabbitMQProperties.BEAN_NAME_E
 @ConditionalOnProperty(name = "embedded.rabbitmq.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(RabbitMQProperties.class)
 public class EmbeddedRabbitMQBootstrapConfiguration {
+    private static final String RABBITMQ_NETWORK_ALIAS = "rabbitmq.testcontainer.docker";
 
     @Bean
     @ConditionalOnToxiProxyEnabled(module = "rabbitmq")
@@ -55,14 +55,15 @@ public class EmbeddedRabbitMQBootstrapConfiguration {
     @Bean(name = BEAN_NAME_EMBEDDED_RABBITMQ, destroyMethod = "stop")
     public RabbitMQContainer rabbitmq(ConfigurableEnvironment environment,
                                       RabbitMQProperties properties,
-                                      Optional<Network> network) {
+                                      Network network) {
         RabbitMQContainer rabbitMQ =
                 new RabbitMQContainer(ContainerUtils.getDockerImageName(properties))
                         .withAdminPassword(properties.getPassword())
                         .withEnv("RABBITMQ_DEFAULT_VHOST", properties.getVhost())
-                        .withExposedPorts(properties.getPort(), properties.getHttpPort());
+                        .withExposedPorts(properties.getPort(), properties.getHttpPort())
+                        .withNetwork(network)
+                        .withNetworkAliases(RABBITMQ_NETWORK_ALIAS);
 
-        network.ifPresent(rabbitMQ::withNetwork);
         rabbitMQ = (RabbitMQContainer) configureCommonsAndStart(rabbitMQ, properties, log);
         registerRabbitMQEnvironment(rabbitMQ, environment, properties);
         return rabbitMQ;

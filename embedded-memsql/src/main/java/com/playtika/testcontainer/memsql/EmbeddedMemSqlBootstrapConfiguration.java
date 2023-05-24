@@ -21,7 +21,6 @@ import org.testcontainers.utility.MountableFile;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.memsql.MemSqlProperties.BEAN_NAME_EMBEDDED_MEMSQL;
@@ -33,6 +32,7 @@ import static com.playtika.testcontainer.memsql.MemSqlProperties.BEAN_NAME_EMBED
 @ConditionalOnProperty(name = "embedded.memsql.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(MemSqlProperties.class)
 public class EmbeddedMemSqlBootstrapConfiguration {
+    private static final String MEMSQL_NETWORK_ALIAS = "memsql.testcontainer.docker";
 
     @Bean
     @ConditionalOnMissingBean
@@ -64,7 +64,7 @@ public class EmbeddedMemSqlBootstrapConfiguration {
     public GenericContainer<?> memsql(ConfigurableEnvironment environment,
                                       MemSqlProperties properties,
                                       MemSqlStatusCheck memSqlStatusCheck,
-                                      Optional<Network> network) {
+                                      Network network) {
         GenericContainer<?> memsql = new GenericContainer<>(ContainerUtils.getDockerImageName(properties))
                 .withEnv("IGNORE_MIN_REQUIREMENTS", "1")
                 .withEnv("LICENSE_KEY", properties.getLicenseKey())
@@ -73,11 +73,14 @@ public class EmbeddedMemSqlBootstrapConfiguration {
                 .withEnv("START_AFTER_INIT", "Y")
                 .withExposedPorts(properties.port)
                 .withCopyFileToContainer(MountableFile.forClasspathResource("mem.sql"), "/schema.sql")
-                .waitingFor(memSqlStatusCheck);
+                .waitingFor(memSqlStatusCheck)
+                .withNetwork(network)
+                .withNetworkAliases(MEMSQL_NETWORK_ALIAS);
+
         if ("aarch".equals(System.getProperty("system.arch"))){
             memsql = memsql.withCommand("platform", "linux/amd64");
         }
-        network.ifPresent(memsql::withNetwork);
+
         memsql = configureCommonsAndStart(memsql, properties, log);
         registerMemSqlEnvironment(memsql, environment, properties);
         return memsql;

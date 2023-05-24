@@ -22,7 +22,6 @@ import org.testcontainers.containers.wait.strategy.WaitStrategy;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.db2.Db2Properties.BEAN_NAME_EMBEDDED_DB2;
@@ -34,6 +33,7 @@ import static com.playtika.testcontainer.db2.Db2Properties.BEAN_NAME_EMBEDDED_DB
 @ConditionalOnProperty(name = "embedded.db2.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(Db2Properties.class)
 public class EmbeddedDb2BootstrapConfiguration {
+    private static final String DB2_NETWORK_ALIAS = "db2.testcontainer.docker";
 
     @Bean
     @ConditionalOnToxiProxyEnabled(module = "db2")
@@ -57,14 +57,14 @@ public class EmbeddedDb2BootstrapConfiguration {
     @Bean(name = BEAN_NAME_EMBEDDED_DB2, destroyMethod = "stop")
     public Db2Container db2(ConfigurableEnvironment environment,
                             Db2Properties properties,
-                            Optional<Network> network) {
+                            Network network) {
         Db2Container db2Container = new Db2Container(ContainerUtils.getDockerImageName(properties))
                 .withDatabaseName(properties.getDatabase())
                 .withUsername(properties.getUser())
                 .withPassword(properties.getPassword())
-                .withInitScript(properties.getInitScriptPath());
-
-        network.ifPresent(db2Container::withNetwork);
+                .withInitScript(properties.getInitScriptPath())
+                .withNetwork(network)
+                .withNetworkAliases(DB2_NETWORK_ALIAS);
 
         String startupLogCheckRegex = properties.getStartupLogCheckRegex();
         if (StringUtils.hasLength(startupLogCheckRegex)) {

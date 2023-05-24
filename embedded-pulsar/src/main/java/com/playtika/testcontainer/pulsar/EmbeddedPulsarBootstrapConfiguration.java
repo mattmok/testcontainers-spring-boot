@@ -18,7 +18,6 @@ import org.testcontainers.containers.ToxiproxyContainer;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.pulsar.PulsarProperties.EMBEDDED_PULSAR;
 
@@ -28,6 +27,7 @@ import static com.playtika.testcontainer.pulsar.PulsarProperties.EMBEDDED_PULSAR
 @ConditionalOnProperty(name = "embedded.pulsar.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(PulsarProperties.class)
 public class EmbeddedPulsarBootstrapConfiguration {
+    private static final String PULSAR_NETWORK_ALIAS = "pulsar.testcontainer.docker";
 
     @Bean
     @ConditionalOnToxiProxyEnabled(module = "pulsar")
@@ -53,13 +53,15 @@ public class EmbeddedPulsarBootstrapConfiguration {
     public PulsarContainer embeddedPulsar(PulsarProperties pulsarProperties,
                                           ConfigurableEnvironment environment,
                                           @Deprecated @Value("${embedded.pulsar.imageTag:#{null}}") String deprImageTag,
-                                          Optional<Network> network) {
+                                          Network network) {
         if (deprImageTag != null) {
             throw new IllegalArgumentException("Property `embedded.pulsar.imageTag` is deprecated. Please replace property `embedded.pulsar.imageTag` with `embedded.pulsar.dockerImageVersion`.");
         }
-        PulsarContainer pulsarContainer = new PulsarContainer(ContainerUtils.getDockerImageName(pulsarProperties));
 
-        network.ifPresent(pulsarContainer::withNetwork);
+        PulsarContainer pulsarContainer = new PulsarContainer(ContainerUtils.getDockerImageName(pulsarProperties))
+                .withNetwork(network)
+                .withNetworkAliases(PULSAR_NETWORK_ALIAS);
+
         pulsarContainer = (PulsarContainer) ContainerUtils.configureCommonsAndStart(pulsarContainer, pulsarProperties, log);
         registerEmbeddedPulsarEnvironment(environment, pulsarContainer);
         return pulsarContainer;

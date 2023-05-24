@@ -20,7 +20,6 @@ import org.testcontainers.containers.ToxiproxyContainer;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.clickhouse.ClickHouseProperties.BEAN_NAME_EMBEDDED_CLICK_HOUSE;
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
@@ -32,6 +31,7 @@ import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCo
 @ConditionalOnProperty(name = "embedded.clickhouse.enabled", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(ClickHouseProperties.class)
 public class EmbeddedClickHouseBootstrapConfiguration {
+    private static final String CLICKHOUSE_NETWORK_ALIAS = "clickhouse.testcontainer.docker";
 
     @Bean
     @ConditionalOnToxiProxyEnabled(module = "clickhouse")
@@ -56,11 +56,11 @@ public class EmbeddedClickHouseBootstrapConfiguration {
     @Bean(name = BEAN_NAME_EMBEDDED_CLICK_HOUSE, destroyMethod = "stop")
     public ClickHouseContainer clickHouseContainer(ConfigurableEnvironment environment,
                                                    ClickHouseProperties properties,
-                                                   Optional<Network> network) {
+                                                   Network network) {
         ClickHouseContainer clickHouseContainer = new ClickHouseContainer(ContainerUtils.getDockerImageName(properties))
-                .withInitScript(properties.getInitScriptPath());
-
-        network.ifPresent(clickHouseContainer::withNetwork);
+                .withInitScript(properties.getInitScriptPath())
+                .withNetwork(network)
+                .withNetworkAliases(CLICKHOUSE_NETWORK_ALIAS);
 
         String username = !StringUtils.hasLength(properties.getUser()) ? clickHouseContainer.getUsername() : properties.getUser();
         String password = !StringUtils.hasLength(properties.getPassword()) ? clickHouseContainer.getPassword() : properties.getPassword();

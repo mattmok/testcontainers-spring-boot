@@ -57,14 +57,6 @@ public class KafkaContainerConfiguration {
 
     public static final String KAFKA_HOST_NAME = "kafka-broker.testcontainer.docker";
 
-    @Bean(destroyMethod = "close")
-    @ConditionalOnMissingBean(Network.class)
-    public Network kafkaNetwork() {
-        Network network = Network.newNetwork();
-        log.info("Created docker Network id={}", network.getId());
-        return network;
-    }
-
     @Bean
     @ConditionalOnMissingBean
     public KafkaStatusCheck kafkaStartupCheckStrategy(KafkaConfigurationProperties kafkaProperties) {
@@ -123,9 +115,9 @@ public class KafkaContainerConfiguration {
             ConfigurableEnvironment environment,
             Network network,
             @Autowired(required = false) @Qualifier(KAFKA_PLAIN_TEXT_TOXI_PROXY_BEAN_NAME)
-                    ToxiproxyContainer.ContainerProxy plainTextProxy,
+            ToxiproxyContainer.ContainerProxy plainTextProxy,
             @Autowired(required = false) @Qualifier(KAFKA_SASL_TOXI_PROXY_BEAN_NAME)
-                    ToxiproxyContainer.ContainerProxy saslProxy) {
+            ToxiproxyContainer.ContainerProxy saslProxy) {
 
         int kafkaInternalPort = kafkaProperties.getContainerBrokerPort(); // for access from other containers
         int kafkaExternalPort = kafkaProperties.getBrokerPort();  // for access from host

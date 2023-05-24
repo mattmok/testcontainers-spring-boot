@@ -20,7 +20,6 @@ import org.testcontainers.containers.ToxiproxyContainer;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.mongodb.MongodbProperties.BEAN_NAME_EMBEDDED_MONGODB;
@@ -35,6 +34,7 @@ import static com.playtika.testcontainer.mongodb.MongodbProperties.BEAN_NAME_EMB
         matchIfMissing = true)
 @EnableConfigurationProperties(MongodbProperties.class)
 public class EmbeddedMongodbBootstrapConfiguration {
+    private static final String MONGODB_NETWORK_ALIAS = "mongodb.testcontainer.docker";
 
     @Bean
     @ConditionalOnToxiProxyEnabled(module = "mongodb")
@@ -60,16 +60,16 @@ public class EmbeddedMongodbBootstrapConfiguration {
     public GenericContainer<?> mongodb(ConfigurableEnvironment environment,
                                        MongodbProperties properties,
                                        MongodbStatusCheck mongodbStatusCheck,
-                                       Optional<Network> network) {
+                                       Network network) {
         GenericContainer<?> mongodb =
                 new GenericContainer<>(ContainerUtils.getDockerImageName(properties))
                         .withEnv("MONGO_INITDB_ROOT_USERNAME", properties.getUsername())
                         .withEnv("MONGO_INITDB_ROOT_PASSWORD", properties.getPassword())
                         .withEnv("MONGO_INITDB_DATABASE", properties.getDatabase())
                         .withExposedPorts(properties.getPort())
-                        .waitingFor(mongodbStatusCheck);
-
-        network.ifPresent(mongodb::withNetwork);
+                        .waitingFor(mongodbStatusCheck)
+                        .withNetwork(network)
+                        .withNetworkAliases(MONGODB_NETWORK_ALIAS);
 
         mongodb = configureCommonsAndStart(mongodb, properties, log);
         registerMongodbEnvironment(mongodb, environment, properties);

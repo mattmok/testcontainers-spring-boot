@@ -22,7 +22,6 @@ import org.testcontainers.containers.wait.strategy.WaitStrategy;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.postgresql.PostgreSQLProperties.BEAN_NAME_EMBEDDED_POSTGRESQL;
@@ -34,6 +33,7 @@ import static com.playtika.testcontainer.postgresql.PostgreSQLProperties.BEAN_NA
 @ConditionalOnProperty(name = "embedded.postgresql.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(PostgreSQLProperties.class)
 public class EmbeddedPostgreSQLBootstrapConfiguration {
+    private static final String POSTGRESQL_NETWORK_ALIAS = "postgresql.testcontainer.docker";
 
     @Bean
     @ConditionalOnToxiProxyEnabled(module = "postgresql")
@@ -57,16 +57,16 @@ public class EmbeddedPostgreSQLBootstrapConfiguration {
     @Bean(name = BEAN_NAME_EMBEDDED_POSTGRESQL, destroyMethod = "stop")
     public PostgreSQLContainer postgresql(ConfigurableEnvironment environment,
                                           PostgreSQLProperties properties,
-                                          Optional<Network> network) {
+                                          Network network) {
 
         PostgreSQLContainer postgresql =
                 new PostgreSQLContainer<>(ContainerUtils.getDockerImageName(properties))
                         .withUsername(properties.getUser())
                         .withPassword(properties.getPassword())
                         .withDatabaseName(properties.getDatabase())
-                        .withInitScript(properties.initScriptPath);
-
-        network.ifPresent(postgresql::withNetwork);
+                        .withInitScript(properties.initScriptPath)
+                        .withNetwork(network)
+                        .withNetworkAliases(POSTGRESQL_NETWORK_ALIAS);
 
         String startupLogCheckRegex = properties.getStartupLogCheckRegex();
         if (StringUtils.hasLength(startupLogCheckRegex)) {

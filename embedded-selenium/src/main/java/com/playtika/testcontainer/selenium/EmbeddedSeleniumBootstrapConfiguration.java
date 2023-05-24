@@ -37,7 +37,6 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.selenium.SeleniumProperties.BEAN_NAME_EMBEDDED_SELENIUM;
 import static java.time.temporal.ChronoUnit.SECONDS;
@@ -50,6 +49,7 @@ import static java.time.temporal.ChronoUnit.SECONDS;
 @EnableConfigurationProperties(SeleniumProperties.class)
 @RequiredArgsConstructor
 public class EmbeddedSeleniumBootstrapConfiguration {
+    private static final String SELENIUM_NETWORK_ALIAS = "selenium.testcontainer.docker";
 
     private static final String TC_TEMP_DIR_PREFIX = "tc";
     public static final String DEFINED_VNC_USERNAME = "vnc";
@@ -81,7 +81,7 @@ public class EmbeddedSeleniumBootstrapConfiguration {
     public BrowserWebDriverContainer selenium(ConfigurableEnvironment environment,
                                               SeleniumProperties properties,
                                               MutableCapabilities capabilities,
-                                              Optional<Network> network) {
+                                              Network network) {
 
         BrowserWebDriverContainer container = isNotBlank(properties.getDockerImage())
                 ? new BrowserWebDriverContainer<>(ContainerUtils.getDockerImageName(properties))
@@ -90,7 +90,9 @@ public class EmbeddedSeleniumBootstrapConfiguration {
         container.setWaitStrategy(getWaitStrategy());
         container.withCapabilities(capabilities);
         container.withRecordingFileFactory(getRecordingFileFactory());
-        network.ifPresent(container::withNetwork);
+        container.withNetwork(network);
+        container.withNetworkAliases(SELENIUM_NETWORK_ALIAS);
+
         File recordingDirOrNull = null;
         if (properties.getVnc().getMode().convert() != BrowserWebDriverContainer.VncRecordingMode.SKIP) {
             recordingDirOrNull = getOrCreateTempDir(properties.getVnc().getRecordingDir());

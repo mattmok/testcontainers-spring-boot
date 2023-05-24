@@ -8,23 +8,23 @@ import org.springframework.core.io.ResourceLoader;
 import org.testcontainers.containers.Network;
 
 import java.util.LinkedHashMap;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 
 @Slf4j
 @RequiredArgsConstructor
 public class KeycloakContainerFactory {
+    private static final String KEYCLOAK_NETWORK_ALIAS = "keycloak.testcontainer.docker";
 
     private final ConfigurableEnvironment environment;
     private final KeycloakProperties properties;
     private final ResourceLoader resourceLoader;
-    private final Optional<Network> network;
+    private final Network network;
 
     public KeycloakContainer newKeycloakContainer() {
-        KeycloakContainer keycloak = new KeycloakContainer(properties, resourceLoader);
-
-        network.ifPresent(keycloak::withNetwork);
+        KeycloakContainer keycloak = new KeycloakContainer(properties, resourceLoader)
+                .withNetwork(network)
+                .withNetworkAliases(KEYCLOAK_NETWORK_ALIAS);
 
         keycloak = (KeycloakContainer) configureCommonsAndStart(keycloak, properties, log);
         registerKeycloakEnvironment(keycloak);

@@ -19,7 +19,6 @@ import org.testcontainers.containers.ToxiproxyContainer;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.neo4j.Neo4jProperties.BEAN_NAME_EMBEDDED_NEO4J;
@@ -31,6 +30,7 @@ import static com.playtika.testcontainer.neo4j.Neo4jProperties.BEAN_NAME_EMBEDDE
 @ConditionalOnProperty(name = "embedded.neo4j.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(Neo4jProperties.class)
 public class EmbeddedNeo4jBootstrapConfiguration {
+    private static final String NEO4J_NETWORK_ALIAS = "neo4j.testcontainer.docker";
 
     @Bean
     @ConditionalOnToxiProxyEnabled(module = "neo4j")
@@ -56,11 +56,12 @@ public class EmbeddedNeo4jBootstrapConfiguration {
     @Bean(name = BEAN_NAME_EMBEDDED_NEO4J, destroyMethod = "stop")
     public Neo4jContainer neo4j(ConfigurableEnvironment environment,
                                 Neo4jProperties properties,
-                                Optional<Network> network) {
+                                Network network) {
         Neo4jContainer neo4j = new Neo4jContainer<>(ContainerUtils.getDockerImageName(properties))
-                .withAdminPassword(properties.password);
+                .withAdminPassword(properties.password)
+                .withNetwork(network)
+                .withNetworkAliases(NEO4J_NETWORK_ALIAS);
 
-        network.ifPresent(neo4j::withNetwork);
         neo4j = (Neo4jContainer) configureCommonsAndStart(neo4j, properties, log);
         registerNeo4jEnvironment(neo4j, environment, properties);
         return neo4j;

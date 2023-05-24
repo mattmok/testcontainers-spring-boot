@@ -21,7 +21,6 @@ import org.testcontainers.containers.wait.strategy.Wait;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.consul.ConsulProperties.BEAN_NAME_EMBEDDED_CONSUL;
@@ -33,6 +32,7 @@ import static com.playtika.testcontainer.consul.ConsulProperties.BEAN_NAME_EMBED
 @EnableConfigurationProperties(ConsulProperties.class)
 @ConditionalOnProperty(name = "embedded.consul.enabled", matchIfMissing = true)
 public class EmbeddedConsulBootstrapConfiguration {
+    private static final String CONSUL_NETWORK_ALIAS = "consul.testcontainer.docker";
 
     @Bean
     @ConditionalOnToxiProxyEnabled(module = "consul")
@@ -57,15 +57,16 @@ public class EmbeddedConsulBootstrapConfiguration {
     @Bean(name = BEAN_NAME_EMBEDDED_CONSUL, destroyMethod = "stop")
     public GenericContainer<?> consulContainer(ConfigurableEnvironment environment,
                                                ConsulProperties properties,
-                                               Optional<Network> network) {
+                                               Network network) {
         GenericContainer<?> consul = new GenericContainer<>(ContainerUtils.getDockerImageName(properties))
                 .withExposedPorts(properties.getPort())
                 .waitingFor(
                         Wait.forHttp("/v1/status/leader")
                                 .forStatusCode(200)
-                ).withStartupTimeout(properties.getTimeoutDuration());
-
-        network.ifPresent(consul::withNetwork);
+                )
+                .withStartupTimeout(properties.getTimeoutDuration())
+                .withNetwork(network)
+                .withNetworkAliases(CONSUL_NETWORK_ALIAS);
 
         if (properties.getConfigurationFile() != null) {
             consul = consul.withClasspathResourceMapping(

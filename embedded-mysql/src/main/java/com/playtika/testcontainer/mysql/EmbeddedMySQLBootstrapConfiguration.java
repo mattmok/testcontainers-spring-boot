@@ -19,7 +19,6 @@ import org.testcontainers.containers.ToxiproxyContainer;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.mysql.MySQLProperties.BEAN_NAME_EMBEDDED_MYSQL;
@@ -31,6 +30,7 @@ import static com.playtika.testcontainer.mysql.MySQLProperties.BEAN_NAME_EMBEDDE
 @ConditionalOnProperty(name = "embedded.mysql.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(MySQLProperties.class)
 public class EmbeddedMySQLBootstrapConfiguration {
+    private static final String MYSQL_NETWORK_ALIAS = "mysql.testcontainer.docker";
 
     @Bean
     @ConditionalOnToxiProxyEnabled(module = "mysql")
@@ -55,7 +55,7 @@ public class EmbeddedMySQLBootstrapConfiguration {
     @Bean(name = BEAN_NAME_EMBEDDED_MYSQL, destroyMethod = "stop")
     public MySQLContainer mysql(ConfigurableEnvironment environment,
                                 MySQLProperties properties,
-                                Optional<Network> network) {
+                                Network network) {
 
         MySQLContainer mysql = new MySQLContainer<>(ContainerUtils.getDockerImageName(properties))
                 .withEnv("MYSQL_ALLOW_EMPTY_PASSWORD", "yes")
@@ -65,10 +65,10 @@ public class EmbeddedMySQLBootstrapConfiguration {
                 .withCommand(
                         "--character-set-server=" + properties.getEncoding(),
                         "--collation-server=" + properties.getCollation())
-                //.withExposedPorts(properties.getPort())
-                .withInitScript(properties.getInitScriptPath());
+                .withInitScript(properties.getInitScriptPath())
+                .withNetwork(network)
+                .withNetworkAliases(MYSQL_NETWORK_ALIAS);
 
-        network.ifPresent(mysql::withNetwork);
         mysql = (MySQLContainer) configureCommonsAndStart(mysql, properties, log);
         registerMySQLEnvironment(mysql, environment, properties);
         return mysql;

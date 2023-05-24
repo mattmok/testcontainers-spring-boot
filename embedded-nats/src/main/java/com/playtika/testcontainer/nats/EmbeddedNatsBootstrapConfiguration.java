@@ -24,7 +24,6 @@ import org.testcontainers.utility.MountableFile;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.nats.NatsProperties.BEAN_NAME_EMBEDDED_NATS;
@@ -37,6 +36,7 @@ import static com.playtika.testcontainer.nats.NatsProperties.BEAN_NAME_EMBEDDED_
 @ConditionalOnProperty(name = "embedded.nats.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(NatsProperties.class)
 public class EmbeddedNatsBootstrapConfiguration {
+    private static final String NATS_NETWORK_ALIAS = "nats.testcontainer.docker";
 
     @Bean(name = BEAN_NAME_EMBEDDED_NATS_TOXI_PROXY)
     @ConditionalOnToxiProxyEnabled(module = "nats")
@@ -61,7 +61,7 @@ public class EmbeddedNatsBootstrapConfiguration {
     @Bean(name = BEAN_NAME_EMBEDDED_NATS, destroyMethod = "stop")
     public GenericContainer<?> natsContainer(ConfigurableEnvironment environment,
                                              NatsProperties properties,
-                                             Optional<Network> network) {
+                                             Network network) {
         WaitStrategy waitStrategy = new WaitAllStrategy()
                 .withStrategy(new HostPortWaitStrategy())
                 .withStartupTimeout(properties.getTimeoutDuration());
@@ -69,9 +69,9 @@ public class EmbeddedNatsBootstrapConfiguration {
         GenericContainer<?> natsContainer = new GenericContainer<>(ContainerUtils.getDockerImageName(properties))
                 .withExposedPorts(properties.getClientPort(), properties.getHttpMonitorPort(), properties.getRouteConnectionsPort())
                 .withCopyFileToContainer(MountableFile.forClasspathResource("nats-server.conf"), "/nats-server.conf")
-                .waitingFor(waitStrategy);
-
-        network.ifPresent(natsContainer::withNetwork);
+                .waitingFor(waitStrategy)
+                .withNetwork(network)
+                .withNetworkAliases(NATS_NETWORK_ALIAS);
 
         natsContainer = configureCommonsAndStart(natsContainer, properties, log);
 

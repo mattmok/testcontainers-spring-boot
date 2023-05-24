@@ -19,7 +19,6 @@ import org.testcontainers.containers.ToxiproxyContainer;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.oracle.OracleProperties.BEAN_NAME_EMBEDDED_ORACLE;
@@ -33,6 +32,7 @@ import static com.playtika.testcontainer.oracle.OracleProperties.ORACLE_PORT;
 @ConditionalOnProperty(name = "embedded.oracle.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(OracleProperties.class)
 public class EmbeddedOracleBootstrapConfiguration {
+    private static final String ORACLE_NETWORK_ALIAS = "oracle.testcontainer.docker";
 
     @Bean
     @ConditionalOnToxiProxyEnabled(module = "oracle")
@@ -56,15 +56,16 @@ public class EmbeddedOracleBootstrapConfiguration {
     @Bean(name = BEAN_NAME_EMBEDDED_ORACLE, destroyMethod = "stop")
     public OracleContainer oracle(ConfigurableEnvironment environment,
                                   OracleProperties properties,
-                                  Optional<Network> network) {
+                                  Network network) {
 
         OracleContainer oracle =
                 new OracleContainer(ContainerUtils.getDockerImageName(properties))
                         .withUsername(properties.getUser())
                         .withPassword(properties.getPassword())
-                        .withInitScript(properties.initScriptPath);
+                        .withInitScript(properties.initScriptPath)
+                        .withNetwork(network)
+                        .withNetworkAliases(ORACLE_NETWORK_ALIAS);
 
-        network.ifPresent(oracle::withNetwork);
         oracle = (OracleContainer) configureCommonsAndStart(oracle, properties, log);
         registerOracleEnvironment(oracle, environment, properties);
         return oracle;

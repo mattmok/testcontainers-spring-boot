@@ -19,7 +19,6 @@ import org.testcontainers.containers.ToxiproxyContainer;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.mariadb.MariaDBProperties.BEAN_NAME_EMBEDDED_MARIADB;
@@ -31,6 +30,7 @@ import static com.playtika.testcontainer.mariadb.MariaDBProperties.BEAN_NAME_EMB
 @ConditionalOnProperty(name = "embedded.mariadb.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(MariaDBProperties.class)
 public class EmbeddedMariaDBBootstrapConfiguration {
+    private static final String MARIADB_NETWORK_ALIAS = "mariadb.testcontainer.docker";
 
     @Bean
     @ConditionalOnToxiProxyEnabled(module = "mariadb")
@@ -55,7 +55,7 @@ public class EmbeddedMariaDBBootstrapConfiguration {
     @Bean(name = BEAN_NAME_EMBEDDED_MARIADB, destroyMethod = "stop")
     public MariaDBContainer mariadb(ConfigurableEnvironment environment,
                                     MariaDBProperties properties,
-                                    Optional<Network> network) throws Exception {
+                                    Network network) throws Exception {
 
         MariaDBContainer mariadb =
                 new MariaDBContainer<>(ContainerUtils.getDockerImageName(properties))
@@ -68,9 +68,9 @@ public class EmbeddedMariaDBBootstrapConfiguration {
                                 "--collation-server=" + properties.getCollation(),
                                 "--max_allowed_packet=" + properties.getMaxAllowedPacket())
                         .withExposedPorts(properties.getPort())
-                        .withInitScript(properties.getInitScriptPath());
-
-        network.ifPresent(mariadb::withNetwork);
+                        .withInitScript(properties.getInitScriptPath())
+                        .withNetwork(network)
+                        .withNetworkAliases(MARIADB_NETWORK_ALIAS);
 
         mariadb = (MariaDBContainer) configureCommonsAndStart(mariadb, properties, log);
         registerMariadbEnvironment(mariadb, environment, properties);

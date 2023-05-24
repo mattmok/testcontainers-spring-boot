@@ -18,7 +18,6 @@ import org.testcontainers.containers.ToxiproxyContainer;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.keycloak.KeycloakProperties.BEAN_NAME_EMBEDDED_KEYCLOAK;
 import static java.util.Objects.requireNonNull;
@@ -55,7 +54,7 @@ public class EmbeddedKeycloakBootstrapConfiguration {
     public KeycloakContainerFactory keycloakContainerFactory(ConfigurableEnvironment environment,
                                                              KeycloakProperties properties,
                                                              ResourceLoader resourceLoader,
-                                                             Optional<Network> network) {
+                                                             Network network) {
         return new KeycloakContainerFactory(environment, properties, resourceLoader, network);
     }
 

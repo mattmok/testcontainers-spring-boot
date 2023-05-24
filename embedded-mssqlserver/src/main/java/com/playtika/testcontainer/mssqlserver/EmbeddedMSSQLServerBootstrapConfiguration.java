@@ -22,7 +22,6 @@ import org.testcontainers.containers.wait.strategy.WaitStrategy;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.mssqlserver.MSSQLServerProperties.BEAN_NAME_EMBEDDED_MSSQLSERVER;
@@ -34,6 +33,7 @@ import static com.playtika.testcontainer.mssqlserver.MSSQLServerProperties.BEAN_
 @ConditionalOnProperty(name = "embedded.mssqlserver.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(MSSQLServerProperties.class)
 public class EmbeddedMSSQLServerBootstrapConfiguration {
+    private static final String MSSQLSERVER_NETWORK_ALIAS = "mssqlserver.testcontainer.docker";
 
     @Bean
     @ConditionalOnToxiProxyEnabled(module = "mssqlserver")
@@ -57,13 +57,13 @@ public class EmbeddedMSSQLServerBootstrapConfiguration {
     @Bean(name = BEAN_NAME_EMBEDDED_MSSQLSERVER, destroyMethod = "stop")
     public EmbeddedMSSQLServerContainer mssqlserver(ConfigurableEnvironment environment,
                                                     MSSQLServerProperties properties,
-                                                    Optional<Network> network) {
+                                                    Network network) {
 
         EmbeddedMSSQLServerContainer mssqlServerContainer = new EmbeddedMSSQLServerContainer(ContainerUtils.getDockerImageName(properties))
                 .withPassword(properties.getPassword())
-                .withInitScript(properties.getInitScriptPath());
-
-        network.ifPresent(mssqlServerContainer::withNetwork);
+                .withInitScript(properties.getInitScriptPath())
+                .withNetwork(network)
+                .withNetworkAliases(MSSQLSERVER_NETWORK_ALIAS);
 
         String startupLogCheckRegex = properties.getStartupLogCheckRegex();
         if (StringUtils.hasLength(startupLogCheckRegex)) {

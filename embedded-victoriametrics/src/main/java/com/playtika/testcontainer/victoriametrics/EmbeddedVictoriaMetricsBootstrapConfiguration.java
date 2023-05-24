@@ -21,7 +21,6 @@ import org.testcontainers.containers.wait.strategy.WaitStrategy;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
 import static com.playtika.testcontainer.common.utils.ContainerUtils.getDockerImageName;
@@ -33,6 +32,8 @@ import static com.playtika.testcontainer.common.utils.ContainerUtils.getDockerIm
 @AutoConfigureAfter({DockerPresenceBootstrapConfiguration.class, EmbeddedToxiProxyBootstrapConfiguration.class})
 @ConditionalOnProperty(name = "embedded.victoriametrics.enabled", matchIfMissing = true)
 public class EmbeddedVictoriaMetricsBootstrapConfiguration {
+    private static final String VICTORIAMETRICS_NETWORK_ALIAS = "victoriametrics.testcontainer.docker";
+
 
     @Bean
     @ConditionalOnMissingBean(name = "victoriaMetricsWaitStrategy")
@@ -65,18 +66,18 @@ public class EmbeddedVictoriaMetricsBootstrapConfiguration {
 
     @Bean(name = VictoriaMetricsProperties.VICTORIA_METRICS_BEAN_NAME, destroyMethod = "stop")
     public GenericContainer<?> victoriaMetrics(ConfigurableEnvironment environment,
-                                            VictoriaMetricsProperties properties,
-                                            WaitStrategy victoriaMetricsWaitStrategy,
-                                            Optional<Network> network) {
+                                               VictoriaMetricsProperties properties,
+                                               WaitStrategy victoriaMetricsWaitStrategy,
+                                               Network network) {
 
         GenericContainer<?> victoriaMetrics =
                 new GenericContainer<>(getDockerImageName(properties))
                         .withExposedPorts(properties.getPort())
                         .withNetwork(Network.SHARED)
                         .withNetworkAliases(properties.getNetworkAlias())
-                        .waitingFor(victoriaMetricsWaitStrategy);
-
-        network.ifPresent(victoriaMetrics::withNetwork);
+                        .waitingFor(victoriaMetricsWaitStrategy)
+                        .withNetwork(network)
+                        .withNetworkAliases(VICTORIAMETRICS_NETWORK_ALIAS);
 
         configureCommonsAndStart(victoriaMetrics, properties, log);
 

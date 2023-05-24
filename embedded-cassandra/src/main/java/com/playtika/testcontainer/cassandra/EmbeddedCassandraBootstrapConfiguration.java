@@ -23,10 +23,8 @@ import org.testcontainers.delegate.DatabaseDelegate;
 import org.testcontainers.ext.ScriptUtils;
 
 import javax.script.ScriptException;
-
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.cassandra.CassandraProperties.BEAN_NAME_EMBEDDED_CASSANDRA;
 import static com.playtika.testcontainer.cassandra.CassandraProperties.DEFAULT_DATACENTER;
@@ -40,6 +38,7 @@ import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCo
 @EnableConfigurationProperties(CassandraProperties.class)
 @RequiredArgsConstructor
 public class EmbeddedCassandraBootstrapConfiguration {
+    private static final String CASSANDRA_NETWORK_ALIAS = "cassandra.testcontainer.docker";
 
     private final ResourceLoader resourceLoader;
 
@@ -66,12 +65,13 @@ public class EmbeddedCassandraBootstrapConfiguration {
     @Bean(name = BEAN_NAME_EMBEDDED_CASSANDRA, destroyMethod = "stop")
     public CassandraContainer cassandra(ConfigurableEnvironment environment,
                                         CassandraProperties properties,
-                                        Optional<Network> network) throws Exception {
+                                        Network network) throws Exception {
 
         CassandraContainer cassandra = new CassandraContainer<>(ContainerUtils.getDockerImageName(properties))
-                .withExposedPorts(properties.getPort());
+                .withExposedPorts(properties.getPort())
+                .withNetwork(network)
+                .withNetworkAliases(CASSANDRA_NETWORK_ALIAS);
 
-        network.ifPresent(cassandra::withNetwork);
         cassandra = (CassandraContainer) configureCommonsAndStart(cassandra, properties, log);
         initKeyspace(properties, cassandra);
         Map<String, Object> cassandraEnv = registerCassandraEnvironment(environment, cassandra, properties);

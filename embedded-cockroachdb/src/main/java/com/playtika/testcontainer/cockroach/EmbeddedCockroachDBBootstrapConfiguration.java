@@ -19,7 +19,6 @@ import org.testcontainers.containers.ToxiproxyContainer;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.playtika.testcontainer.cockroach.CockroachDBProperties.BEAN_NAME_EMBEDDED_COCKROACHDB;
 import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCommonsAndStart;
@@ -31,10 +30,11 @@ import static com.playtika.testcontainer.common.utils.ContainerUtils.configureCo
 @ConditionalOnProperty(name = "embedded.cockroach.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(CockroachDBProperties.class)
 public class EmbeddedCockroachDBBootstrapConfiguration {
+    private static final String COCKROACHDB_NETWORK_ALIAS = "сockroachdb.testcontainer.docker";
 
     @Bean
-    @ConditionalOnToxiProxyEnabled(module = "cockroach")
-    ToxiproxyContainer.ContainerProxy cockroachContainerProxy(ToxiproxyContainer toxiproxyContainer,
+    @ConditionalOnToxiProxyEnabled(module = "cockroachdb")
+    ToxiproxyContainer.ContainerProxy cockroachDbContainerProxy(ToxiproxyContainer toxiproxyContainer,
                                                                 @Qualifier(BEAN_NAME_EMBEDDED_COCKROACHDB) CockroachContainer cockroachContainer,
                                                                 CockroachDBProperties properties,
                                                                 ConfigurableEnvironment environment) {
@@ -55,13 +55,13 @@ public class EmbeddedCockroachDBBootstrapConfiguration {
     @Bean(name = BEAN_NAME_EMBEDDED_COCKROACHDB, destroyMethod = "stop")
     public CockroachContainer cockroach(ConfigurableEnvironment environment,
                                           CockroachDBProperties properties,
-                                          Optional<Network> network) throws Exception {
+                                          Network network) throws Exception {
 
         CockroachContainer cockroachContainer = new CockroachContainer(ContainerUtils.getDockerImageName(properties))
                 .withExposedPorts(properties.getPort())
-                .withInitScript(properties.getInitScriptPath());
-
-        network.ifPresent(cockroachContainer::withNetwork);
+                .withInitScript(properties.getInitScriptPath())
+                .withNetwork(network)
+                .withNetworkAliases(COCKROACHDB_NETWORK_ALIAS);
 
         cockroachContainer = (CockroachContainer) configureCommonsAndStart(cockroachContainer, properties, log);
         registerCockroachDBEnvironment(cockroachContainer, environment, properties);
