@@ -17,6 +17,7 @@ import org.testcontainers.containers.output.OutputFrame;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.images.ImagePullPolicy;
 import org.testcontainers.images.PullPolicy;
+import org.testcontainers.shaded.org.apache.commons.lang3.StringUtils;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
 
@@ -51,6 +52,23 @@ public class ContainerUtils {
                 customImage, defaultImage);
         return customImage.asCompatibleSubstituteFor(defaultImage);
     }
+
+    /**
+     * 获取天迈默认镜像
+     *
+     * @param properties
+     * @return java.lang.String
+     */
+    private static String getDefaultImageName(CommonContainerProperties properties) {
+        String defaultDockerImageName = properties.getDefaultDockerImage();
+        StringBuilder buffer = new StringBuilder("registry.tiamaes.com:5000/");
+        if (!StringUtils.contains(defaultDockerImageName, "/")) {
+            buffer.append("library/");
+        }
+        buffer.append(defaultDockerImageName);
+        return buffer.toString();
+    }
+
 
     private static DockerImageName setupImage(String imageName, CommonContainerProperties properties) {
         DockerImageName image = DockerImageName.parse(imageName);
